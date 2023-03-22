@@ -1,0 +1,13 @@
+[package]
+name = "rtx"
+version = "0.0.1"
+author = "mills"
+
+[dependencies]
+
+[package.metadata.bootimage]
+build-command = ["build"]
+
+run-command = [
+    "qemu-system-riscv64", "", "" 
+]
