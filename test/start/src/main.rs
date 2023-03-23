@@ -1,29 +1,82 @@
-// src/main.rs
+//! # 全局属性
+//! - `#![no_std]`  
+//!   禁用标准库
+#![no_std]
+//!
+//! - `#![no_main]`  
+//!   不使用 `main` 函数等全部 Rust-level 入口点来作为程序入口
+#![no_main]
+//! # 一些 unstable 的功能需要在 crate 层级声明后才可以使用
+//! - `#![feature(asm)]`  
+//!   内嵌汇编
 //#![feature(asm)]
-// 在屏幕上输出一个字符，目前我们先不用了解其实现原理
+//!
+//! - `#![feature(global_asm)]`
+//!   内嵌整个汇编文件
+//#![feature(global_asm)]
 
-use std::arch::asm;
+//#![feature(lang_items)]
 
-pub fn console_putchar(ch: u8) {
-    let ret: usize;
-    let arg0: usize = ch as usize;
-    let arg1: usize = 0;
-    let arg2: usize = 0;
-    let which: usize = 1;
+use core::arch::asm;
+use core::panic::PanicInfo;
+//use std::fmt;
+//use std::io::{stdout, Write};
+
+/// 当 panic 发生时会调用该函数
+/// 我们暂时将它的实现为一个死循环
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    loop {}
+}
+
+/// 在屏幕上输出一个字符，目前我们先不用了解其实现原理
+fn sbi_call(which: usize, arg0: usize, arg1: usize, arg2: usize) -> usize {
+    let ret: usize = 0;
     unsafe {
-        asm!("ecall",
-            "={x10}" (ret),
-            "{x10}" (arg0), "{x11}" (arg1), "{x12}" (arg2), "{x17}" (which),
-            "memory",
-            "volatile",
+        asm!(                                                                                                
+            "mv x10, {arg0}",                                                                                   
+            "mv x11, {arg1}",                                                                                   
+            "mv x12, {arg2}",                                                                                   
+            "mv x17, {which}",                                                                                   
+            "ecall",                                                                                         
+            "mv {a}, {ret}",                                                                                 
+            ret = inout(reg) arg0,                                                                          
+            ret = in(reg) arg1,                                                                                                                                                                                  
+            ret = in(reg) arg2,
+            ret = in(reg) which,                                                                             					                					                                                                                               
+            ret = out(reg) ret,                              
         );
     }
+    return ret;
 }
+
+pub fn console_putchar(ch: char) {
+    sbi_call(SBI_CONSOLE_PUTCHAR, ch as usize, 0, 0);
+}
+pub fn console_getchar() -> usize {
+    sbi_call(SBI_CONSOLE_GETCHAR, 0, 0, 0)
+}
+
+const SBI_SET_TIMER: usize = 0;
+const SBI_CONSOLE_PUTCHAR: usize = 1;
+const SBI_CONSOLE_GETCHAR: usize = 2;
+const SBI_CLEAR_IPI: usize = 3;
+const SBI_SEND_IPI: usize = 4;
+const SBI_REMOTE_FENCE_I: usize = 5;
+const SBI_REMOTE_SFENCE_VMA: usize = 6;
+const SBI_REMOTE_SFENCE_VMA_ASID: usize = 7;
+const SBI_SHUTDOWN: usize = 8;
+
+/// Rust 的入口函数
+///
+/// 在 `_start` 为我们进行了一系列准备之后，这是第一个被调用的 Rust 函数
+//#[lang = "eh_personality"]
 #[no_mangle]
-fn main() -> ! {
+pub extern "C" fn rust_main() -> ! {
     // 在屏幕上输出 "OK\n" ，随后进入死循环
-    console_putchar(b'O');
-    console_putchar(b'K');
-    console_putchar(b'\n');
+    console_putchar('O');
+    console_putchar('K');
+    console_putchar('\n');
+
     loop {}
 }
