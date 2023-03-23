@@ -8,6 +8,13 @@ author = "mills"
 [package.metadata.bootimage]
 build-command = ["build"]
 
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+
 run-command = [
     "qemu-system-riscv64", "", "" 
 ]
+
