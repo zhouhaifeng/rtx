@@ -17,7 +17,6 @@
 
 //#![feature(lang_items)]
 
-use core::arch::asm;
 use core::panic::PanicInfo;
 //use std::fmt;
 //use std::io::{stdout, Write};
@@ -29,32 +28,27 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-/// 在屏幕上输出一个字符，目前我们先不用了解其实现原理
-fn sbi_call(which: usize, arg0: usize, arg1: usize, arg2: usize) -> usize {
-    let ret: usize = 0;
+#[inline(always)]
+fn sbi_call(eid: usize, fid: usize, arg0: usize, arg1: usize, arg2: usize) -> usize {
+    let ret;
     unsafe {
-        asm!(                                                                                                
-            "mv x10, {arg0}",                                                                                   
-            "mv x11, {arg1}",                                                                                   
-            "mv x12, {arg2}",                                                                                   
-            "mv x17, {which}",                                                                                   
-            "ecall",                                                                                         
-            "mv {a}, {ret}",                                                                                 
-            ret = inout(reg) arg0,                                                                          
-            ret = in(reg) arg1,                                                                                                                                                                                  
-            ret = in(reg) arg2,
-            ret = in(reg) which,                                                                             					                					                                                                                               
-            ret = out(reg) ret,                              
+        core::arch::asm!("ecall",
+            inout("x10") arg0 => ret,
+            in("a1") arg1,
+            in("a2") arg2,
+            in("a6") fid,
+            in("a7") eid,
         );
     }
-    return ret;
+    ret
 }
 
-pub fn console_putchar(ch: char) {
-    sbi_call(SBI_CONSOLE_PUTCHAR, ch as usize, 0, 0);
+pub fn console_putchar(ch: usize) -> usize {
+    sbi_call(SBI_CONSOLE_PUTCHAR, 0, ch, 0, 0)
 }
+
 pub fn console_getchar() -> usize {
-    sbi_call(SBI_CONSOLE_GETCHAR, 0, 0, 0)
+    sbi_call(SBI_CONSOLE_GETCHAR, 0, 0, 0, 0)
 }
 
 const SBI_SET_TIMER: usize = 0;
