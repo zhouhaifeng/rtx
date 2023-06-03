@@ -27,6 +27,7 @@
 #include <osv/app.hh>
 #include <osv/symbols.hh>
 
+MAKE_SYMBOL(sched::task::current);
 MAKE_SYMBOL(sched::thread::current);
 MAKE_SYMBOL(sched::cpu::current);
 MAKE_SYMBOL(sched::get_preempt_counter);
@@ -126,6 +127,16 @@ std::list<cpu::notifier*> cpu::notifier::_notifiers __attribute__((init_priority
 #include "arch-switch.hh"
 
 namespace sched {
+
+/* added by zhf begin */
+class task {
+public:
+private:
+    mutex _mtx;
+    std::list<thread*> _zombies;
+    thread_unique_ptr _thread;
+};
+/* added by zhf end */
 
 class thread::reaper {
 public:
